@@ -1,0 +1,14 @@
+{
+  "name": "rocket-rpc-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zero-dependency RPC proxy that holds $ROCKET RPC keys server-side.",
+  "scripts": {
+    "start": "node --env-file=.env index.mjs",
+    "dev": "node --env-file=.env --watch index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

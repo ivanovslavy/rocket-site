@@ -1,0 +1,136 @@
+@import 'tailwindcss';
+
+/* ── $ROCKET design tokens ───────────────────────────────────────────── */
+@theme {
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* deep space base — never pure black */
+  --color-space-900: #06061c;
+  --color-space-800: #0a0a2e;
+  --color-space-700: #141047;
+  --color-space-600: #221a63;
+
+  /* playful accents */
+  --color-rocket-cyan: #34e0ff;
+  --color-rocket-pink: #ff5cc8;
+  --color-rocket-violet: #a86bff;
+  --color-rocket-yellow: #ffd23f;
+  --color-rocket-green: #4dffb0;
+  --color-rocket-orange: #ff8a3d;
+}
+
+html {
+  scroll-behavior: auto;
+  color-scheme: dark; /* dark theme by default (form controls, scrollbars) */
+  background: #06061c; /* base backdrop behind the fixed 3D canvas */
+}
+
+body {
+  margin: 0;
+  /* MUST stay transparent: the 3D canvas is fixed at z-index -10 behind the
+     content. An opaque body background would paint over and hide it. */
+  background: transparent;
+  color: #f4f1ff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden; /* normal vertical scroll drives the 3D scene */
+}
+
+#root {
+  width: 100%;
+}
+
+/* High-contrast text that floats over the busy 3D scene */
+.text-glow {
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.85),
+    0 0 30px rgba(52, 224, 255, 0.25);
+}
+
+.heading-glow {
+  text-shadow:
+    0 3px 18px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(168, 107, 255, 0.4);
+}
+
+/* Dark glassy content card — a "bright island" over the cosmos */
+.glass-card {
+  background: linear-gradient(
+    180deg,
+    rgba(20, 16, 71, 0.82) 0%,
+    rgba(10, 10, 46, 0.88) 100%
+  );
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(168, 107, 255, 0.35);
+  box-shadow:
+    0 20px 60px -15px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 50px -20px rgba(52, 224, 255, 0.4);
+}
+
+/* gentle scrim behind text to guarantee legibility */
+.text-scrim {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(6, 6, 28, 0.55) 0%,
+    rgba(6, 6, 28, 0) 75%
+  );
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.animate-float {
+  animation: float-y 5s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+/* buttery swap-field transition when flipping ETH ⇄ ROCKET */
+@keyframes swap-pop {
+  0% {
+    opacity: 0.25;
+    transform: translateY(8px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-swap {
+  animation: swap-pop 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* thin custom scrollbar inside swap/panels */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(168, 107, 255, 0.5);
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-swap {
+    animation: none;
+  }
+}
