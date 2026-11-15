@@ -64,7 +64,7 @@ export function FeaturePanel() {
       aria-hidden={!open}
     >
       <div
-        className={`pointer-events-auto relative w-full max-w-3xl rounded-3xl glass-card p-7 transition-all duration-300 ${
+        className={`${open ? 'pointer-events-auto' : 'pointer-events-none'} relative w-full max-w-3xl rounded-3xl glass-card p-7 transition-all duration-300 ${
           open ? 'translate-y-0 scale-100' : 'translate-y-4 scale-95'
         }`}
       >

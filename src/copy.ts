@@ -76,7 +76,7 @@ export interface MoonFact {
 
 export const MOON_FACTS: MoonFact[] = [
   { id: 'supply', icon: 'coin', label: 'Supply', value: '100,000,000,000' },
-  { id: 'liquidity', icon: 'droplet', label: 'Liquidity', value: '3 ETH, 100% in pool' },
+  { id: 'liquidity', icon: 'droplet', label: 'Liquidity', value: '5 ETH, 100% in pool' },
   { id: 'lp', icon: 'lock', label: 'LP Locked', value: 'Liquidity locked' },
   { id: 'renounced', icon: 'ban', label: 'Ownership', value: 'Renounced' },
   { id: 'tax', icon: 'zerotax', label: '0% Tax', value: 'After launch shield' },
@@ -95,7 +95,7 @@ export const TOKENOMICS = {
   ],
   facts: [
     { k: 'Total supply', v: '100,000,000,000 $ROCKET (fixed, no mint)' },
-    { k: 'Liquidity', v: '3 ETH · 100% of supply in the pool' },
+    { k: 'Liquidity', v: '5 ETH · 100% of supply in the pool' },
     { k: 'LP', v: 'Locked' },
     { k: 'Ownership', v: 'Renounced' },
     { k: 'Tax', v: '0% buy / 0% sell (after the launch shield)' },

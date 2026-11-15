@@ -40,7 +40,7 @@ export function LorePanel() {
       }`}
       aria-hidden={!open}
     >
-      <div className="pointer-events-auto w-full max-w-lg rounded-3xl glass-card p-7">
+      <div className={`${open ? 'pointer-events-auto' : 'pointer-events-none'} w-full max-w-lg rounded-3xl glass-card p-7`}>
         {ch && (
           <>
             {pinned && (
