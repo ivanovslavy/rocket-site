@@ -18,6 +18,7 @@ import { createServer } from 'node:http'
  */
 
 const PORT = Number(process.env.PORT || 8787)
+const HOST = process.env.HOST || '127.0.0.1'
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*'
 
 const ankrKeys = (process.env.ANKR_KEYS || '')
@@ -25,45 +26,64 @@ const ankrKeys = (process.env.ANKR_KEYS || '')
   .map((s) => s.trim())
   .filter(Boolean)
 
-function providersFor(chain) {
-  const list = []
-  if (chain === 'mainnet') {
-    if (process.env.INFURA_KEY)
-      list.push(`https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`)
-    if (process.env.ALCHEMY_KEY)
-      list.push(`https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`)
-    for (const k of ankrKeys) list.push(`https://rpc.ankr.com/eth/${k}`)
-    if (process.env.QUICKNODE_MAINNET_URL) list.push(process.env.QUICKNODE_MAINNET_URL)
-  } else if (chain === 'sepolia') {
-    if (process.env.ALCHEMY_SEPOLIA_URL) list.push(process.env.ALCHEMY_SEPOLIA_URL)
-    if (process.env.ALCHEMY_KEY)
-      list.push(`https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`)
-    if (process.env.INFURA_KEY)
-      list.push(`https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`)
-    for (const k of ankrKeys) list.push(`https://rpc.ankr.com/eth_sepolia/${k}`)
-  }
-  return list
+const PUBLIC = {
+  mainnet: [
+    'https://ethereum-rpc.publicnode.com',
+    'https://eth.llamarpc.com',
+    'https://1rpc.io/eth',
+    'https://cloudflare-eth.com',
+  ],
+  sepolia: [
+    'https://ethereum-sepolia-rpc.publicnode.com',
+    'https://sepolia.drpc.org',
+  ],
 }
 
-async function forward(urls, body) {
+function providersFor(chain) {
+  // Два ката: ПЪРВО публични keyless нодове (пестят keyed квотата), ПОСЛЕ моите
+  // API ключове — Ankr (ротация между тях), Infura накрая. Ключовете се ползват
+  // само ако всички публични паднат.
+  const pub = [...(PUBLIC[chain] || [])]
+  const keyed = []
+  if (chain === 'mainnet') {
+    for (const k of ankrKeys) keyed.push(`https://rpc.ankr.com/eth/${k}`)
+    if (process.env.INFURA_KEY) keyed.push(`https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`)
+  } else if (chain === 'sepolia') {
+    for (const k of ankrKeys) keyed.push(`https://rpc.ankr.com/eth_sepolia/${k}`)
+    if (process.env.INFURA_KEY) keyed.push(`https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`)
+  }
+  return { pub, keyed }
+}
+
+async function tryOne(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body,
+    signal: AbortSignal.timeout(9000),
+  })
+  if (r.status === 429 || r.status === 401 || r.status === 403 || r.status >= 500) {
+    throw new Error(`provider HTTP ${r.status}`)
+  }
+  return await r.text()
+}
+
+// ПЪРВО публичните по ред; паднат ли ВСИЧКИ → keyed с кръгова ротация (всяка
+// заявка почва от следващия Ankr ключ; падне ли последният → пак от първия).
+let rr = 0
+async function forward(pub, keyed, body) {
   let lastErr = 'no providers configured'
-  for (const url of urls) {
-    try {
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body,
-        signal: AbortSignal.timeout(9000),
-      })
-      if (r.status === 429 || r.status >= 500) {
-        lastErr = `provider HTTP ${r.status}`
-        continue // rate-limited / provider error → rotate to the next key
-      }
-      const text = await r.text()
-      return { ok: true, text }
-    } catch (e) {
-      lastErr = e?.message || 'fetch failed'
-      continue
+  for (const url of pub) {
+    try { return { ok: true, text: await tryOne(url, body) } }
+    catch (e) { lastErr = e?.message || 'fetch failed' }
+  }
+  const n = keyed.length
+  if (n > 0) {
+    const start = rr++ % n
+    for (let i = 0; i < n; i++) {
+      const url = keyed[(start + i) % n] // wrap: след последния пак от първия
+      try { return { ok: true, text: await tryOne(url, body) } }
+      catch (e) { lastErr = e?.message || 'fetch failed' }
     }
   }
   return { ok: false, error: lastErr }
@@ -105,8 +125,8 @@ const server = createServer(async (req, res) => {
       JSON.stringify({
         ok: true,
         providers: {
-          mainnet: providersFor('mainnet').length,
-          sepolia: providersFor('sepolia').length,
+          mainnet: (() => { const p = providersFor('mainnet'); return { public: p.pub.length, keyed: p.keyed.length } })(),
+          sepolia: (() => { const p = providersFor('sepolia'); return { public: p.pub.length, keyed: p.keyed.length } })(),
         },
       }),
     )
@@ -115,14 +135,14 @@ const server = createServer(async (req, res) => {
   const m = url.pathname.match(/^\/rpc\/(mainnet|sepolia)$/)
   if (req.method === 'POST' && m) {
     const chain = m[1]
-    const urls = providersFor(chain)
-    if (urls.length === 0) {
+    const { pub, keyed } = providersFor(chain)
+    if (pub.length + keyed.length === 0) {
       res.writeHead(503, { 'content-type': 'application/json' })
       return res.end(JSON.stringify({ error: `no providers for ${chain}` }))
     }
     try {
       const body = await readBody(req)
-      const result = await forward(urls, body)
+      const result = await forward(pub, keyed, body)
       if (result.ok) {
         res.writeHead(200, { 'content-type': 'application/json' })
         return res.end(result.text)
@@ -139,9 +159,8 @@ const server = createServer(async (req, res) => {
   res.end(JSON.stringify({ error: 'not found' }))
 })
 
-server.listen(PORT, () => {
-  console.log(`[rocket-rpc] proxy listening on http://localhost:${PORT}`)
-  console.log(
-    `[rocket-rpc] providers — mainnet:${providersFor('mainnet').length} sepolia:${providersFor('sepolia').length}`,
-  )
+server.listen(PORT, HOST, () => {
+  console.log(`[rocket-rpc] proxy listening on http://${HOST}:${PORT}`)
+  const cnt = (c) => { const x = providersFor(c); return x.pub.length + x.keyed.length }
+  console.log(`[rocket-rpc] providers — mainnet:${cnt('mainnet')} sepolia:${cnt('sepolia')}`)
 })
