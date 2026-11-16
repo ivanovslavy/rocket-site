@@ -114,5 +114,7 @@ export const DEFAULT_DEADLINE_MINUTES = 20
 export const LAUNCH_VENUE = { chain: 'Ethereum', dex: 'Uniswap v2' } as const
 
 /** WalletConnect Cloud project id (empty → injected wallets only). */
+export const TURNSTILE_SITEKEY = (import.meta.env.VITE_TURNSTILE_SITEKEY || '') as string
+
 export const WALLETCONNECT_PROJECT_ID =
   import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? ''

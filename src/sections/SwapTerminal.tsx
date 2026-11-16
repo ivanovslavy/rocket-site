@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useSwap } from '../hooks/useSwap'
 import { SWAP_COPY } from '../copy'
-import { LAUNCH_VENUE } from '../config'
+import { LAUNCH_VENUE, TURNSTILE_SITEKEY } from '../config'
 import { txUrl } from '../links'
 import { CheckIcon, EthIcon, RocketIcon, SwapIcon } from '../components/icons'
 
@@ -13,6 +13,26 @@ export function SwapTerminal() {
   // cumulative rotation so the flip button keeps spinning the same way
   const [spin, setSpin] = useState(0)
   const flipsRef = useRef(0)
+
+  // Cloudflare Turnstile (invisible) — пази swap-а от ботове; бутонът е блокиран до преминаване
+  const [tsToken, setTsToken] = useState('')
+  const tsRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!TURNSTILE_SITEKEY || !tsRef.current) return
+    const w = window as unknown as { turnstile?: { render: (el: HTMLElement, o: Record<string, unknown>) => string; remove: (id?: string) => void } }
+    let wid: string | undefined
+    const render = () => {
+      if (!w.turnstile || !tsRef.current) return false
+      wid = w.turnstile.render(tsRef.current, { sitekey: TURNSTILE_SITEKEY, callback: (t: string) => setTsToken(t), 'error-callback': () => setTsToken(''), 'expired-callback': () => setTsToken('') })
+      return true
+    }
+    // fail-open: ако Turnstile скриптът не се зареди за 8с (adblock/мрежа) → не заключваме купувачите
+    const failOpen = setTimeout(() => { if (!w.turnstile) setTsToken("__skip__") }, 8000)
+    if (render()) { clearTimeout(failOpen); return () => { try { w.turnstile?.remove(wid) } catch { /* noop */ } } }
+    const iv = setInterval(() => { if (render()) { clearTimeout(failOpen); clearInterval(iv) } }, 300)
+    return () => { clearTimeout(failOpen); clearInterval(iv) }
+  }, [])
+  const tsGated = !!TURNSTILE_SITEKEY && !tsToken
 
   // refs to the two token boxes so we can physically slide them past each other
   const [flipping, setFlipping] = useState(false)
@@ -135,16 +155,17 @@ export function SwapTerminal() {
 
           {/* primary action */}
           <button
-            disabled={s.actionDisabled}
+            disabled={s.actionDisabled || tsGated}
             onClick={() => void s.submit()}
             className={`mt-4 w-full rounded-2xl py-4 font-display text-lg font-extrabold transition-all ${
-              s.actionDisabled
+              s.actionDisabled || tsGated
                 ? 'cursor-not-allowed bg-white/10 text-white/50'
                 : 'cursor-pointer bg-gradient-to-r from-rocket-cyan to-rocket-violet text-space-900 hover:scale-[1.02]'
             }`}
           >
-            {s.actionLabel}
+            {s.isConnected && tsGated ? 'Verifying…' : s.actionLabel}
           </button>
+          <div ref={tsRef} className="mt-2 flex justify-center" />
 
           {s.error && (
             <p className="mt-3 rounded-lg bg-rocket-pink/15 px-3 py-2 text-center text-xs text-rocket-pink ring-1 ring-rocket-pink/30">
