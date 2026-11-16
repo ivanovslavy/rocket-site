@@ -1,4 +1,4 @@
-import { CHAIN } from './config'
+import { CHAIN, TOKEN_ADDRESS } from './config'
 
 /**
  * Social & explorer links. All placeholders for now — swap the `href`
@@ -20,7 +20,7 @@ export const SOCIAL_LINKS: SocialLink[] = [
 ]
 
 /** On-chain placeholders shown across the page (copy buttons, explorer). */
-export const CONTRACT_ADDRESS_DISPLAY = '0x9960Dc6f2b0a20C72DCf10eB147979B6eC67a016'
+export const CONTRACT_ADDRESS_DISPLAY = TOKEN_ADDRESS ?? '0x9960Dc6f2b0a20C72DCf10eB147979B6eC67a016'
 export const LP_LOCKER_URL = 'NA'
 export const RENOUNCE_TX_URL = 'NA'
 export const VERIFIED_CONTRACT_URL = 'NA'

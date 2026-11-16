@@ -254,7 +254,7 @@ function buildV2({
     return {
       address: V2_ROUTER_ADDRESS,
       abi: V2_ROUTER_ABI,
-      functionName: 'swapExactETHForTokens',
+      functionName: 'swapExactETHForTokensSupportingFeeOnTransferTokens',
       args: [minOut, [WETH_ADDRESS, token], recipient, deadline],
       value: amountInWei,
     }
@@ -262,7 +262,7 @@ function buildV2({
   return {
     address: V2_ROUTER_ADDRESS,
     abi: V2_ROUTER_ABI,
-    functionName: 'swapExactTokensForETH',
+    functionName: 'swapExactTokensForETHSupportingFeeOnTransferTokens',
     args: [amountInWei, minOut, [token, WETH_ADDRESS], recipient, deadline],
   }
 }
