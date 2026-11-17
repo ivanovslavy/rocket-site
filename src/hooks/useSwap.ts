@@ -313,8 +313,11 @@ export function useSwap(): SwapState {
         })
         await publicClient.waitForTransactionReceipt({ hash })
         await refetchAllowance()
-        setStatus('idle')
-        return // let the user press again
+        // The approve is mined on-chain now — continue straight to the swap in
+        // THIS action instead of returning and re-reading the allowance. That
+        // re-read can lag across the multi-RPC fallback (a node that has not yet
+        // seen the approve), which made the button ask for a second approval for
+        // the same sell.
       }
 
       // STEP 2 — v4 only: authorize the Universal Router on Permit2.
@@ -329,8 +332,7 @@ export function useSwap(): SwapState {
         })
         await publicClient.waitForTransactionReceipt({ hash })
         await refetchPermit2()
-        setStatus('idle')
-        return // let the user press again
+        // Permit2 is authorized on-chain now — continue to the swap.
       }
 
       // STEP 3 — the swap itself (routes.ts builds the v2/v3/v4 tx).
@@ -402,7 +404,7 @@ export function useSwap(): SwapState {
             : status === 'success'
               ? 'Success ✓'
               : needsApproval
-                ? `Approve ${TOKEN_SYMBOL}`
+                ? 'Approve & Sell $ROCKET'
                 : direction === 'buy'
                   ? 'Buy $ROCKET'
                   : 'Sell $ROCKET'
